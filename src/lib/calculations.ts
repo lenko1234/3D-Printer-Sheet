@@ -25,6 +25,7 @@ export function calculatePieceCost(
   print_hours: number,
   settings: SettingsMap,
   margin?: number,
+  laborPerPiece?: number,
 ): CostBreakdown {
   const effectiveMargin = margin ?? settings.default_margin
 
@@ -37,8 +38,8 @@ export function calculatePieceCost(
   // 2. Costo Electricidad
   const cost_electricity = print_hours * settings.electricity_per_hour
 
-  // 3. Mano de obra fija
-  const cost_labor = settings.labor_per_piece
+  // 3. Embalaje
+  const cost_labor = laborPerPiece ?? settings.labor_per_piece
 
   // 4. Costo Producción = Filamento + Electricidad + Embalaje
   const cost_production = cost_filament + cost_electricity + cost_labor

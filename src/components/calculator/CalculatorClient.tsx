@@ -34,6 +34,7 @@ export default function CalculatorClient({
   ])
   const [printHours, setPrintHours] = useState(1)
   const [margin, setMargin] = useState(settings.default_margin)
+  const [laborPerPiece, setLaborPerPiece] = useState(settings.labor_per_piece)
   const [productName, setProductName] = useState('')
   const [saving, setSaving] = useState(false)
   const [savedMsg, setSavedMsg] = useState(false)
@@ -53,7 +54,7 @@ export default function CalculatorClient({
       }
     })
 
-  const breakdown = calculatePieceCost(materialInputs, printHours, settings, margin)
+  const breakdown = calculatePieceCost(materialInputs, printHours, settings, margin, laborPerPiece)
   const totalWeight = rows.reduce((s, r) => s + (r.weight_grams || 0), 0)
 
   function addRow() {
@@ -206,10 +207,11 @@ export default function CalculatorClient({
               label={`Electricidad ($${settings.electricity_per_hour}/h × ${printHours}h)`}
               value={breakdown.cost_electricity}
             />
-            <CostRow
+            <EditableCostRow
               icon={<ChevronRight className="w-3.5 h-3.5 text-gray-400" />}
               label="Embalaje por pieza"
               value={breakdown.cost_labor}
+              onSave={(val) => setLaborPerPiece(val)}
             />
             <div className="border-t border-indigo-900/50 mt-1 pt-2.5 flex items-center justify-between">
               <span className="text-sm font-semibold text-white">Costo Total</span>
@@ -307,6 +309,74 @@ function CostRow({ icon, label, value }: { icon: React.ReactNode; label: string;
         <span className="text-xs text-gray-400 truncate">{label}</span>
       </div>
       <span className="text-xs font-semibold text-gray-200 flex-shrink-0">{formatARS(value)}</span>
+    </div>
+  )
+}
+
+function EditableCostRow({
+  icon,
+  label,
+  value,
+  onSave,
+}: {
+  icon: React.ReactNode
+  label: string
+  value: number
+  onSave: (val: number) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [tempVal, setTempVal] = useState(String(value))
+
+  if (editing) {
+    return (
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {icon}
+          <span className="text-xs text-gray-400 truncate">{label}</span>
+        </div>
+        <div className="flex items-center gap-1 text-xs font-semibold text-gray-200">
+          <span>$</span>
+          <input
+            type="number"
+            autoFocus
+            min={0}
+            step={10}
+            value={tempVal}
+            onChange={(e) => setTempVal(e.target.value)}
+            onBlur={() => {
+              onSave(parseFloat(tempVal) || 0)
+              setEditing(false)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                onSave(parseFloat(tempVal) || 0)
+                setEditing(false)
+              }
+            }}
+            className="w-16 text-right p-0 bg-transparent border-b border-indigo-400 focus:outline-none text-xs font-semibold text-gray-200"
+          />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2 min-w-0">
+        {icon}
+        <span className="text-xs text-gray-400 truncate">{label}</span>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          setTempVal(String(value))
+          setEditing(true)
+        }}
+        className="text-xs font-semibold text-gray-200 flex-shrink-0 hover:text-indigo-300 transition-colors border-none bg-transparent cursor-pointer p-0 text-right"
+        title="Hacé click para modificar el costo de embalaje"
+      >
+        {formatARS(value)}
+      </button>
     </div>
   )
 }
