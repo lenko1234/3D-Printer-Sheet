@@ -178,8 +178,12 @@ export default function CalculatorClient({
               <div className="relative">
                 <input
                   type="number" min={0} max={500} step={5}
-                  value={Math.round(margin * 100) || ''}
-                  onChange={(e) => setMargin((parseFloat(e.target.value) || 0) / 100)}
+                  value={margin === 0 ? '' : (Math.round(margin * 100) || '')}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setMargin(val === '' ? 0 : (parseFloat(val) || 0) / 100)
+                  }}
+                  placeholder="40"
                   className="pr-8 text-sm"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">%</span>
@@ -208,15 +212,8 @@ export default function CalculatorClient({
               value={breakdown.cost_labor}
             />
             <div className="border-t border-indigo-900/50 mt-1 pt-2.5 flex items-center justify-between">
-              <span className="text-sm font-semibold text-white">Costo Producción</span>
+              <span className="text-sm font-semibold text-white">Costo Total</span>
               <span className="text-sm font-bold text-white">{formatARS(breakdown.cost_filament + breakdown.cost_electricity + breakdown.cost_labor)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-300 flex items-center gap-1.5">
-                <Wrench className="w-3.5 h-3.5" />
-                Fondo Impresora
-              </span>
-              <span className="text-sm font-semibold text-blue-400">{formatARS(breakdown.cost_machine)}</span>
             </div>
             <div className="border-t border-indigo-900/50 mt-1 pt-2.5 flex items-center justify-between">
               <span className="text-sm font-semibold text-indigo-300">Precio Venta Sugerido</span>

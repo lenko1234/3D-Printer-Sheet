@@ -40,24 +40,21 @@ export function calculatePieceCost(
   // 3. Mano de obra fija
   const cost_labor = settings.labor_per_piece
 
-  // 4. Costo Producción = Filamento + Electricidad + Mano de obra
+  // 4. Costo Producción = Filamento + Electricidad + Embalaje
   const cost_production = cost_filament + cost_electricity + cost_labor
 
   // 5. Fondo Impresora = exactamente el mismo valor que el Costo Producción
   const cost_machine = cost_production
 
-  // 6. Total que se descuenta del precio = Costo Producción + Fondo Impresora
-  const total_cost = cost_production + cost_machine // = 2 × costo_producción
-
-  // 6. Precio de Venta Sugerido
-  const suggested_price = total_cost * (1 + effectiveMargin)
+  // 6. Precio de Venta Sugerido = Costo Producción * (1 + Margen)
+  const suggested_price = cost_production * (1 + effectiveMargin)
 
   return {
     cost_filament: round2(cost_filament),
     cost_electricity: round2(cost_electricity),
     cost_machine: round2(cost_machine),
     cost_labor: round2(cost_labor),
-    total_cost: round2(total_cost),
+    total_cost: round2(cost_production), // Guardamos solo costo de producción como total_cost del producto
     suggested_price: round2(suggested_price),
   }
 }
