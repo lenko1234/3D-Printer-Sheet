@@ -214,8 +214,17 @@ export default function CalculatorClient({
               onSave={(val) => setLaborPerPiece(val)}
             />
             <div className="border-t border-indigo-900/50 mt-1 pt-2.5 flex items-center justify-between">
-              <span className="text-sm font-semibold text-white">Costo Total</span>
+              <span className="text-sm font-semibold text-white">Costo Producción</span>
               <span className="text-sm font-bold text-white">{formatARS(breakdown.cost_filament + breakdown.cost_electricity + breakdown.cost_labor)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-blue-300 flex items-center gap-1.5">
+                <Wrench className="w-3.5 h-3.5" />
+                Fondo Impresora (Aporte A1 Mini)
+              </span>
+              <span className="text-xs font-semibold text-blue-400">
+                {formatARS(breakdown.cost_filament + breakdown.cost_electricity + breakdown.cost_labor)}
+              </span>
             </div>
             <div className="border-t border-indigo-900/50 mt-1 pt-2.5 flex items-center justify-between">
               <span className="text-sm font-semibold text-indigo-300">Precio Venta Sugerido</span>
