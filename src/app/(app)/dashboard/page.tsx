@@ -144,9 +144,14 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Reparto Socios */}
+        {/* Reparto Socios (Solo pendientes a repartir) */}
         <div className="glass-card p-5">
-          <p className="text-sm font-semibold text-white mb-4">Reparto de Ganancias</p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-semibold text-white">Reparto de Ganancias</p>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+              A repartir
+            </span>
+          </div>
           <div className="flex flex-col gap-3">
             {/* Rober */}
             <div className="flex items-center justify-between p-3 rounded-xl"
@@ -155,7 +160,7 @@ export default async function DashboardPage() {
                 <div className="w-7 h-7 rounded-lg gradient-rober flex items-center justify-center text-white text-xs font-bold">R</div>
                 <span className="text-sm font-medium text-purple-200">Rober</span>
               </div>
-              <span className="text-sm font-bold text-purple-300">{formatARS(stats.total_rober)}</span>
+              <span className="text-sm font-bold text-purple-300">{formatARS(stats.pending_rober)}</span>
             </div>
             {/* Cris */}
             <div className="flex items-center justify-between p-3 rounded-xl"
@@ -164,12 +169,12 @@ export default async function DashboardPage() {
                 <div className="w-7 h-7 rounded-lg gradient-cris flex items-center justify-center text-white text-xs font-bold">C</div>
                 <span className="text-sm font-medium text-emerald-200">Cris</span>
               </div>
-              <span className="text-sm font-bold text-emerald-300">{formatARS(stats.total_cris)}</span>
+              <span className="text-sm font-bold text-emerald-300">{formatARS(stats.pending_cris)}</span>
             </div>
             {/* Total */}
             <div className="flex items-center justify-between px-3 py-2 rounded-xl border border-gray-700 bg-gray-800/50">
               <span className="text-xs text-gray-400">Total a repartir</span>
-              <span className="text-sm font-bold text-white">{formatARS(stats.total_net_profit)}</span>
+              <span className="text-sm font-bold text-white">{formatARS(stats.pending_net_profit)}</span>
             </div>
           </div>
         </div>

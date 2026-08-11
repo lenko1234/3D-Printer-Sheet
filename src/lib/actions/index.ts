@@ -162,6 +162,12 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const total_rober = allSales.reduce((sum, s) => sum + s.rober_share, 0)
   const total_cris = allSales.reduce((sum, s) => sum + s.cris_share, 0)
 
+  // Pendientes de repartir (solo ventas con is_distributed = false)
+  const pendingSales = allSales.filter((s) => !s.is_distributed)
+  const pending_rober = pendingSales.reduce((sum, s) => sum + s.rober_share, 0)
+  const pending_cris = pendingSales.reduce((sum, s) => sum + s.cris_share, 0)
+  const pending_net_profit = pendingSales.reduce((sum, s) => sum + s.net_profit, 0)
+
   // % impresora pagada
   const printer_paid_pct = machine_fund_accumulated / settings.printer_total_cost
   const printer_remaining = Math.max(
@@ -182,6 +188,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     total_net_profit: Math.round(total_net_profit * 100) / 100,
     total_rober: Math.round(total_rober * 100) / 100,
     total_cris: Math.round(total_cris * 100) / 100,
+    pending_rober: Math.round(pending_rober * 100) / 100,
+    pending_cris: Math.round(pending_cris * 100) / 100,
+    pending_net_profit: Math.round(pending_net_profit * 100) / 100,
     control_check,
     sales_count: allSales.length,
     last_sales: allSales.slice(0, 5),

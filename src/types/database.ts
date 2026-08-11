@@ -121,6 +121,10 @@ export interface DashboardStats {
   // Por socio
   total_rober: number
   total_cris: number
+  // Pendientes de repartir (solo no repartidos)
+  pending_rober: number
+  pending_cris: number
+  pending_net_profit: number
   // Verificación
   control_check: number // debe ser 0
   // Ventas
