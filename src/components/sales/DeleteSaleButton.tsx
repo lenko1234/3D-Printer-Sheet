@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { deleteSale } from '@/lib/actions'
 import { Trash2, Loader2 } from 'lucide-react'
 
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function DeleteSaleButton({ saleId, productName }: Props) {
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
   async function handleDelete(e: React.MouseEvent) {
@@ -20,6 +22,7 @@ export default function DeleteSaleButton({ saleId, productName }: Props) {
     startTransition(async () => {
       try {
         await deleteSale(saleId)
+        router.refresh()
       } catch (err) {
         alert(err instanceof Error ? err.message : 'Error eliminando venta')
       }
