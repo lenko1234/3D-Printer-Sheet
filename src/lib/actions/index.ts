@@ -21,7 +21,7 @@ async function getSettings(): Promise<SettingsMap> {
 
   return {
     electricity_per_hour: map.electricity_per_hour ?? 20,
-    labor_per_piece: map.labor_per_piece ?? 300,
+    labor_per_piece: map.labor_per_piece ?? 0,
     machine_per_hour: map.machine_per_hour ?? 200,
     printer_total_cost: map.printer_total_cost ?? 350000,
     default_margin: map.default_margin ?? 0.4,

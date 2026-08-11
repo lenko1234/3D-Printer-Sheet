@@ -34,7 +34,10 @@ export default function CalculatorClient({
   ])
   const [printHours, setPrintHours] = useState(1)
   const [margin, setMargin] = useState(settings.default_margin)
-  const [laborPerPiece, setLaborPerPiece] = useState(settings.labor_per_piece)
+  const [laborPerPiece, setLaborPerPiece] = useState(0)
+  const [customSuggestedPrice, setCustomSuggestedPrice] = useState<number | null>(null)
+  const [editingSuggestedPrice, setEditingSuggestedPrice] = useState(false)
+  const [tempSuggestedPrice, setTempSuggestedPrice] = useState('')
   const [productName, setProductName] = useState('')
   const [saving, setSaving] = useState(false)
   const [savedMsg, setSavedMsg] = useState(false)
@@ -55,6 +58,7 @@ export default function CalculatorClient({
     })
 
   const breakdown = calculatePieceCost(materialInputs, printHours, settings, margin, laborPerPiece)
+  const finalSuggestedPrice = customSuggestedPrice !== null ? customSuggestedPrice : breakdown.suggested_price
   const totalWeight = rows.reduce((s, r) => s + (r.weight_grams || 0), 0)
 
   function addRow() {
@@ -78,6 +82,7 @@ export default function CalculatorClient({
     if (!productName.trim()) return
     setSaving(true)
     const costProduction = breakdown.cost_filament + breakdown.cost_electricity + breakdown.cost_labor
+    const effectiveMargin = costProduction > 0 ? (finalSuggestedPrice - costProduction) / costProduction : margin
     try {
       await saveProduct({
         name: productName.trim(),
@@ -90,8 +95,8 @@ export default function CalculatorClient({
         cost_machine: breakdown.cost_machine,
         cost_labor: breakdown.cost_labor,
         calculated_cost: costProduction,
-        suggested_price: breakdown.suggested_price,
-        margin,
+        suggested_price: finalSuggestedPrice,
+        margin: effectiveMargin,
       })
       setSavedMsg(true)
       setProductName('')
@@ -183,6 +188,7 @@ export default function CalculatorClient({
                   onChange={(e) => {
                     const val = e.target.value
                     setMargin(val === '' ? 0 : (parseFloat(val) || 0) / 100)
+                    setCustomSuggestedPrice(null)
                   }}
                   placeholder="40"
                   className="pr-8 text-sm"
@@ -228,7 +234,56 @@ export default function CalculatorClient({
             </div>
             <div className="border-t border-indigo-900/50 mt-1 pt-2.5 flex items-center justify-between">
               <span className="text-sm font-semibold text-indigo-300">Precio Venta Sugerido</span>
-              <span className="text-lg font-bold text-indigo-300">{formatARS(breakdown.suggested_price)}</span>
+              {editingSuggestedPrice ? (
+                <div className="flex items-center gap-1 text-lg font-bold text-indigo-300">
+                  <span>$</span>
+                  <input
+                    type="number"
+                    autoFocus
+                    min={0}
+                    step={50}
+                    value={tempSuggestedPrice}
+                    onChange={(e) => setTempSuggestedPrice(e.target.value)}
+                    onBlur={() => {
+                      const num = parseFloat(tempSuggestedPrice)
+                      if (!isNaN(num)) {
+                        setCustomSuggestedPrice(num)
+                        const costProd = breakdown.cost_filament + breakdown.cost_electricity + breakdown.cost_labor
+                        if (costProd > 0) {
+                          setMargin((num - costProd) / costProd)
+                        }
+                      }
+                      setEditingSuggestedPrice(false)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const num = parseFloat(tempSuggestedPrice)
+                        if (!isNaN(num)) {
+                          setCustomSuggestedPrice(num)
+                          const costProd = breakdown.cost_filament + breakdown.cost_electricity + breakdown.cost_labor
+                          if (costProd > 0) {
+                            setMargin((num - costProd) / costProd)
+                          }
+                        }
+                        setEditingSuggestedPrice(false)
+                      }
+                    }}
+                    className="w-24 text-right p-0 bg-transparent border-b border-indigo-400 focus:outline-none text-lg font-bold text-indigo-300"
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTempSuggestedPrice(String(Math.round(finalSuggestedPrice)))
+                    setEditingSuggestedPrice(true)
+                  }}
+                  className="text-lg font-bold text-indigo-300 flex-shrink-0 hover:text-indigo-200 transition-colors border-none bg-transparent cursor-pointer p-0 text-right"
+                  title="Hacé click para modificar el precio de venta sugerido"
+                >
+                  {formatARS(finalSuggestedPrice)}
+                </button>
+              )}
             </div>
           </div>
 
