@@ -2,6 +2,7 @@ import type { Sale } from '@/types/database'
 import { formatARS } from '@/lib/calculations'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import DeleteSaleButton from '@/components/sales/DeleteSaleButton'
 
 interface Props {
   sales: Sale[]
@@ -47,9 +48,12 @@ export default function RecentSalesTable({ sales }: Props) {
               </p>
             </div>
           </div>
-          <div className="text-right flex-shrink-0">
-            <p className="text-sm font-bold text-white">{formatARS(sale.sale_price)}</p>
-            <p className="text-xs text-emerald-400">+{formatARS(sale.net_profit)}</p>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="text-right">
+              <p className="text-sm font-bold text-white">{formatARS(sale.sale_price)}</p>
+              <p className="text-xs text-emerald-400">+{formatARS(sale.net_profit)}</p>
+            </div>
+            <DeleteSaleButton saleId={sale.id} productName={sale.product_name} />
           </div>
         </div>
       ))}

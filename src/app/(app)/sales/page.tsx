@@ -5,6 +5,7 @@ import { es } from 'date-fns/locale'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { Plus, Filter } from 'lucide-react'
+import DeleteSaleButton from '@/components/sales/DeleteSaleButton'
 
 export const metadata: Metadata = { title: 'Registro de Ventas' }
 export const revalidate = 0
@@ -90,7 +91,7 @@ export default async function SalesPage({ searchParams }: PageProps) {
       ) : (
         <div className="glass-card overflow-hidden">
           {/* Encabezado tabla desktop */}
-          <div className="hidden sm:grid grid-cols-[1fr_1fr_1.2fr_1fr_1fr_1fr] gap-3 px-4 py-2.5 border-b text-xs font-medium text-gray-500 uppercase tracking-wider"
+          <div className="hidden sm:grid grid-cols-[1fr_1fr_1.2fr_1fr_1fr_1fr_auto] gap-3 px-4 py-2.5 border-b text-xs font-medium text-gray-500 uppercase tracking-wider items-center"
             style={{ borderColor: 'rgba(55,65,81,0.5)' }}>
             <span>Fecha</span>
             <span>Vendedor</span>
@@ -98,13 +99,14 @@ export default async function SalesPage({ searchParams }: PageProps) {
             <span>Precio</span>
             <span>Ganancia</span>
             <span>Fondo Maq.</span>
+            <span className="w-7"></span>
           </div>
 
           <div className="flex flex-col">
             {sales.map((sale, idx) => (
               <div
                 key={sale.id}
-                className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.2fr_1fr_1fr_1fr] gap-3 px-4 py-3 transition-colors hover:bg-gray-800/30"
+                className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.2fr_1fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center transition-colors hover:bg-gray-800/30"
                 style={{
                   borderBottom: idx < sales.length - 1 ? '1px solid rgba(55,65,81,0.3)' : 'none',
                 }}
@@ -131,6 +133,9 @@ export default async function SalesPage({ searchParams }: PageProps) {
                 <span className="text-sm font-semibold text-white">{formatARS(sale.sale_price)}</span>
                 <span className="text-sm font-semibold text-emerald-400">{formatARS(sale.net_profit)}</span>
                 <span className="text-sm text-blue-400">{formatARS(sale.machine_fund_contribution)}</span>
+                <div className="flex justify-end">
+                  <DeleteSaleButton saleId={sale.id} productName={sale.product_name} />
+                </div>
               </div>
             ))}
           </div>

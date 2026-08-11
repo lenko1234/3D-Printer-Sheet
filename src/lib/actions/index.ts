@@ -59,35 +59,47 @@ export async function registerSale(input: RegisterSaleInput) {
 
   const qty = Math.max(1, Math.round(input.quantity ?? 1))
 
-  // Ganancia a repartir por unidad = Precio Venta - Costo Producción - Fondo Impresora
-  const net_profit = input.sale_price - input.total_cost - input.cost_machine
+  // Totales acumulados para la venta única de N unidades
+  const total_sale_price = input.sale_price * qty
+  const total_cost = input.total_cost * qty
+  const cost_filament = input.cost_filament * qty
+  const cost_electricity = input.cost_electricity * qty
+  const cost_machine = input.cost_machine * qty
+  const cost_labor = input.cost_labor * qty
 
-  // Reparto de ganancia por unidad (fórmulas exactas del Excel)
+  // Ganancia a repartir total
+  const net_profit = total_sale_price - total_cost - cost_machine
+
+  // Reparto de ganancia total
   const share = calculateProfitShare(net_profit, input.seller_name)
 
-  const rowsToInsert = Array.from({ length: qty }).map(() => ({
-    sale_date: input.sale_date,
-    customer_name: input.customer_name || null,
-    seller_id: user.id,
-    seller_name: input.seller_name,
-    product_id: input.product_id || null,
-    product_name: input.product_name,
-    sale_price: input.sale_price,
-    total_cost: input.total_cost,
-    cost_filament: input.cost_filament,
-    cost_electricity: input.cost_electricity,
-    cost_machine: input.cost_machine,
-    cost_labor: input.cost_labor,
-    machine_fund_contribution: input.cost_machine,
-    rober_share: share.rober,
-    cris_share: share.cris,
-    notes: input.notes || null,
-  }))
+  const productNameToStore =
+    qty > 1 && !input.product_name.includes(`(x${qty})`)
+      ? `${input.product_name} (x${qty})`
+      : input.product_name
 
   const { data, error } = await supabase
     .from('sales')
-    .insert(rowsToInsert)
+    .insert({
+      sale_date: input.sale_date,
+      customer_name: input.customer_name || null,
+      seller_id: user.id,
+      seller_name: input.seller_name,
+      product_id: input.product_id || null,
+      product_name: productNameToStore,
+      sale_price: total_sale_price,
+      total_cost,
+      cost_filament,
+      cost_electricity,
+      cost_machine,
+      cost_labor,
+      machine_fund_contribution: cost_machine,
+      rober_share: share.rober,
+      cris_share: share.cris,
+      notes: input.notes || null,
+    })
     .select()
+    .single()
 
   if (error) throw new Error(`Error registrando venta: ${error.message}`)
 
@@ -95,6 +107,17 @@ export async function registerSale(input: RegisterSaleInput) {
   revalidatePath('/sales')
 
   return data
+}
+
+export async function deleteSale(id: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase.from('sales').delete().eq('id', id)
+
+  if (error) throw new Error(`Error eliminando venta: ${error.message}`)
+
+  revalidatePath('/dashboard')
+  revalidatePath('/sales')
 }
 
 // ============================================================
