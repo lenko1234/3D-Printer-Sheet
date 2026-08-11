@@ -3,11 +3,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { calculatePieceCost, formatARS } from '@/lib/calculations'
-import { saveProduct, getMaterials, getProducts } from '@/lib/actions'
+import { saveProduct, deleteProduct, getMaterials, getProducts } from '@/lib/actions'
 import type { Material, MaterialInput, SettingsMap, Product } from '@/types/database'
 import {
   Plus, Trash2, Save, ShoppingCart, Calculator,
-  Package, Zap, Wrench, ChevronRight,
+  Package, Zap, Wrench, ChevronRight, X,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -105,6 +105,16 @@ export default function CalculatorClient({
       setTimeout(() => setSavedMsg(false), 3000)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDeleteProduct(id: string) {
+    if (!confirm('¿Eliminar este producto del catálogo?')) return
+    try {
+      await deleteProduct(id)
+      setProducts((prev) => prev.filter((p) => p.id !== id))
+    } catch (err) {
+      console.error('Error eliminando producto:', err)
     }
   }
 
@@ -334,9 +344,17 @@ export default function CalculatorClient({
               {products.map((p) => (
                 <div
                   key={p.id}
-                  className="flex items-center justify-between gap-3 p-3 rounded-xl transition-colors hover:bg-gray-800/40"
+                  className="relative flex items-center justify-between gap-3 p-3 pr-8 rounded-xl transition-colors hover:bg-gray-800/40 group"
                   style={{ border: '1px solid rgba(55,65,81,0.4)' }}
                 >
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteProduct(p.id)}
+                    className="absolute top-2.5 right-2.5 w-5 h-5 flex items-center justify-center rounded-md text-gray-500 hover:text-red-400 hover:bg-red-950/50 transition-all opacity-60 group-hover:opacity-100"
+                    title="Eliminar producto del catálogo"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-white truncate">{p.name}</p>
                     <p className="text-xs text-gray-500">
