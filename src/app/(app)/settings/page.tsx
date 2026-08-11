@@ -112,7 +112,10 @@ export default async function SettingsPage() {
                   className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{
                     background:
-                      m.color?.toLowerCase() === 'dorado' ? '#f59e0b'
+                      m.color?.toLowerCase().includes('rose') ? '#fb7185'
+                      : m.color?.toLowerCase().includes('verde') ? '#22c55e'
+                      : m.color?.toLowerCase().includes('surtido') ? 'linear-gradient(45deg, #f43f5e, #3b82f6, #10b981)'
+                      : m.color?.toLowerCase() === 'dorado' ? '#f59e0b'
                       : m.color?.toLowerCase() === 'negro' ? '#1f2937'
                       : m.color?.toLowerCase() === 'blanco' ? '#f9fafb'
                       : m.color?.toLowerCase() === 'plateado' ? '#9ca3af'
