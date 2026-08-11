@@ -42,11 +42,21 @@ export default function SaleForm({ userProfile }: Props) {
     cost_electricity: costElectricity,
     cost_machine: costMachine || initialCostProduction,
     cost_labor: costLabor,
+    quantity: 1,
     notes: '',
   })
 
-  // Ganancia a repartir = Precio Venta - Costo Producción - Fondo Impresora
-  const net_profit = form.sale_price - form.total_cost - form.cost_machine
+  const qty = Math.max(1, form.quantity || 1)
+  const unit_sale_price = form.sale_price
+  const unit_total_cost = form.total_cost
+  const unit_cost_machine = form.cost_machine
+
+  const total_sale_price = unit_sale_price * qty
+  const total_production_cost = unit_total_cost * qty
+  const total_machine_cost = unit_cost_machine * qty
+
+  // Ganancia a repartir total
+  const net_profit = total_sale_price - total_production_cost - total_machine_cost
   const roberShare =
     form.seller_name === 'Rober' ? net_profit * 0.7 : net_profit * 0.2
   const crisShare =
@@ -56,7 +66,7 @@ export default function SaleForm({ userProfile }: Props) {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) {
     const { name, value, type } = e.target
-    const val = type === 'number' ? parseFloat(value) || 0 : value
+    const val = type === 'number' ? (value === '' ? 0 : parseFloat(value) || 0) : value
 
     setForm((prev) => {
       if (name === 'total_cost') {
@@ -94,7 +104,9 @@ export default function SaleForm({ userProfile }: Props) {
         <div className="w-16 h-16 rounded-full bg-emerald-900/50 flex items-center justify-center">
           <CheckCircle2 className="w-8 h-8 text-emerald-400" />
         </div>
-        <h2 className="text-xl font-bold text-white">¡Venta registrada!</h2>
+        <h2 className="text-xl font-bold text-white">
+          {qty > 1 ? `¡${qty} Ventas registradas!` : '¡Venta registrada!'}
+        </h2>
         <p className="text-sm text-gray-400">Redirigiendo al historial...</p>
       </div>
     )
@@ -133,33 +145,62 @@ export default function SaleForm({ userProfile }: Props) {
         </div>
       </div>
 
-      {/* Precios */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* Cantidad + Precios Unitarios */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="text-xs text-gray-400 mb-1.5 block">Precio de Venta (ARS) *</label>
-          <input type="number" name="sale_price" value={form.sale_price || ''}
-            onChange={handleChange} min={0} step="any" placeholder="0" required />
+          <label className="text-xs text-gray-400 mb-1.5 block">Cantidad *</label>
+          <input
+            type="number"
+            name="quantity"
+            value={form.quantity || ''}
+            onChange={handleChange}
+            min={1}
+            step={1}
+            placeholder="1"
+            required
+          />
         </div>
         <div>
-          <label className="text-xs text-gray-400 mb-1.5 block">Costo Producción (ARS) *</label>
-          <input type="number" name="total_cost" value={form.total_cost || ''}
-            onChange={handleChange} min={0} step="any" placeholder="Filamento + luz + mano de obra" required />
+          <label className="text-xs text-gray-400 mb-1.5 block">Precio Unitario (ARS) *</label>
+          <input
+            type="number"
+            name="sale_price"
+            value={form.sale_price || ''}
+            onChange={handleChange}
+            min={0}
+            step="any"
+            placeholder="0"
+            required
+          />
+        </div>
+        <div>
+          <label className="text-xs text-gray-400 mb-1.5 block">Costo Unitario Producción (ARS) *</label>
+          <input
+            type="number"
+            name="total_cost"
+            value={form.total_cost || ''}
+            onChange={handleChange}
+            min={0}
+            step="any"
+            placeholder="Filamento + luz + mano de obra"
+            required
+          />
         </div>
       </div>
 
       {/* Fondo Impresora */}
       <div>
-        <label className="text-xs text-gray-400 mb-1.5 block">Fondo Impresora (ARS)</label>
+        <label className="text-xs text-gray-400 mb-1.5 block">Fondo Impresora (ARS por unidad)</label>
         <input
           type="number"
           name="cost_machine"
           value={form.cost_machine || ''}
           readOnly
           className="bg-gray-900 border-gray-800 text-blue-300 font-semibold cursor-not-allowed"
-          placeholder="Se calcula igual al costo de producción"
+          placeholder="Se calcula igual al costo de producción por unidad"
         />
         <p className="text-xs text-gray-600 mt-1">
-          Igual al Costo de Producción (se acumula en el pozo hasta cubrir los ${(815000).toLocaleString('es-AR')})
+          Igual al Costo de Producción por unidad (se acumula en el pozo hasta cubrir el costo de la impresora)
         </p>
       </div>
 
@@ -168,24 +209,37 @@ export default function SaleForm({ userProfile }: Props) {
         className="rounded-xl p-4 flex flex-col gap-2"
         style={{ background: 'rgba(30,30,60,0.5)', border: '1px solid rgba(99,102,241,0.2)' }}
       >
-        <p className="text-xs font-semibold text-indigo-300 mb-1 uppercase tracking-wider">Desglose de la Venta</p>
+        <div className="flex justify-between items-center mb-1">
+          <p className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Desglose de la Venta</p>
+          {qty > 1 && (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              {qty} unidades
+            </span>
+          )}
+        </div>
 
         {/* Precio Venta */}
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-300">Precio de Venta</span>
-          <span className="text-sm font-bold text-white">{formatARS(form.sale_price)}</span>
+          <span className="text-sm text-gray-300">
+            Precio de Venta {qty > 1 ? `(${qty} × ${formatARS(unit_sale_price)})` : ''}
+          </span>
+          <span className="text-sm font-bold text-white">{formatARS(total_sale_price)}</span>
         </div>
 
         {/* Costo Producción */}
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-400">─ Costo Producción</span>
-          <span className="text-sm font-medium text-red-400">−{formatARS(form.total_cost)}</span>
+          <span className="text-sm text-gray-400">
+            ─ Costo Producción {qty > 1 ? `(${qty} × ${formatARS(unit_total_cost)})` : ''}
+          </span>
+          <span className="text-sm font-medium text-red-400">−{formatARS(total_production_cost)}</span>
         </div>
 
         {/* Fondo Impresora */}
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-400">─ Fondo Impresora</span>
-          <span className="text-sm font-medium text-blue-400">−{formatARS(form.cost_machine)}</span>
+          <span className="text-sm text-gray-400">
+            ─ Fondo Impresora {qty > 1 ? `(${qty} × ${formatARS(unit_cost_machine)})` : ''}
+          </span>
+          <span className="text-sm font-medium text-blue-400">−{formatARS(total_machine_cost)}</span>
         </div>
 
         {/* Divisor */}
@@ -193,7 +247,7 @@ export default function SaleForm({ userProfile }: Props) {
 
         {/* Ganancia a Repartir */}
         <div className="flex justify-between items-center">
-          <span className="text-sm font-semibold text-white">Ganancia a Repartir</span>
+          <span className="text-sm font-semibold text-white">Ganancia a Repartir Total</span>
           <span className={`text-base font-bold ${net_profit >= 0 ? 'text-indigo-300' : 'text-red-400'}`}>
             {formatARS(net_profit)}
           </span>
@@ -252,7 +306,11 @@ export default function SaleForm({ userProfile }: Props) {
           className="btn btn-primary flex-1"
         >
           {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          {isPending ? 'Registrando...' : 'Registrar Venta'}
+          {isPending
+            ? 'Registrando...'
+            : qty > 1
+            ? `Registrar Venta (${qty} unidades)`
+            : 'Registrar Venta'}
         </button>
       </div>
     </form>

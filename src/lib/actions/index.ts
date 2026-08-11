@@ -45,6 +45,7 @@ export interface RegisterSaleInput {
   cost_machine: number
   cost_labor: number
   notes?: string
+  quantity?: number
 }
 
 export async function registerSale(input: RegisterSaleInput) {
@@ -56,37 +57,37 @@ export async function registerSale(input: RegisterSaleInput) {
 
   if (!user) throw new Error('No autenticado')
 
-  // Ganancia a repartir = Precio Venta - Costo Producción - Fondo Impresora
+  const qty = Math.max(1, Math.round(input.quantity ?? 1))
+
+  // Ganancia a repartir por unidad = Precio Venta - Costo Producción - Fondo Impresora
   const net_profit = input.sale_price - input.total_cost - input.cost_machine
 
-  // Reparto de ganancia (fórmulas exactas del Excel)
+  // Reparto de ganancia por unidad (fórmulas exactas del Excel)
   const share = calculateProfitShare(net_profit, input.seller_name)
 
-  // El aporte al fondo impresora = costo_maquina de la pieza
-  const machine_fund_contribution = input.cost_machine
+  const rowsToInsert = Array.from({ length: qty }).map(() => ({
+    sale_date: input.sale_date,
+    customer_name: input.customer_name || null,
+    seller_id: user.id,
+    seller_name: input.seller_name,
+    product_id: input.product_id || null,
+    product_name: input.product_name,
+    sale_price: input.sale_price,
+    total_cost: input.total_cost,
+    cost_filament: input.cost_filament,
+    cost_electricity: input.cost_electricity,
+    cost_machine: input.cost_machine,
+    cost_labor: input.cost_labor,
+    machine_fund_contribution: input.cost_machine,
+    rober_share: share.rober,
+    cris_share: share.cris,
+    notes: input.notes || null,
+  }))
 
   const { data, error } = await supabase
     .from('sales')
-    .insert({
-      sale_date: input.sale_date,
-      customer_name: input.customer_name || null,
-      seller_id: user.id,
-      seller_name: input.seller_name,
-      product_id: input.product_id || null,
-      product_name: input.product_name,
-      sale_price: input.sale_price,
-      total_cost: input.total_cost,
-      cost_filament: input.cost_filament,
-      cost_electricity: input.cost_electricity,
-      cost_machine: input.cost_machine,
-      cost_labor: input.cost_labor,
-      machine_fund_contribution,
-      rober_share: share.rober,
-      cris_share: share.cris,
-      notes: input.notes || null,
-    })
+    .insert(rowsToInsert)
     .select()
-    .single()
 
   if (error) throw new Error(`Error registrando venta: ${error.message}`)
 
