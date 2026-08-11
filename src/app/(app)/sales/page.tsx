@@ -1,11 +1,8 @@
 import { getSales } from '@/lib/actions'
-import { formatARS } from '@/lib/calculations'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { Plus, Filter } from 'lucide-react'
-import DeleteSaleButton from '@/components/sales/DeleteSaleButton'
+import SalesTableRow from '@/components/sales/SalesTableRow'
 
 export const metadata: Metadata = { title: 'Registro de Ventas' }
 export const revalidate = 0
@@ -104,39 +101,11 @@ export default async function SalesPage({ searchParams }: PageProps) {
 
           <div className="flex flex-col">
             {sales.map((sale, idx) => (
-              <div
+              <SalesTableRow
                 key={sale.id}
-                className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.2fr_1fr_1fr_1fr_auto] gap-3 px-4 py-3 items-center transition-colors hover:bg-gray-800/30"
-                style={{
-                  borderBottom: idx < sales.length - 1 ? '1px solid rgba(55,65,81,0.3)' : 'none',
-                }}
-              >
-                <span className="text-sm text-gray-300">
-                  {format(new Date(sale.sale_date), 'dd/MM/yy', { locale: es })}
-                </span>
-                <span
-                  className="badge w-fit"
-                  style={{
-                    background: sale.seller_name === 'Rober' ? 'rgba(124,58,237,0.2)' : 'rgba(16,185,129,0.2)',
-                    color: sale.seller_name === 'Rober' ? '#a78bfa' : '#6ee7b7',
-                    border: `1px solid ${sale.seller_name === 'Rober' ? 'rgba(124,58,237,0.3)' : 'rgba(16,185,129,0.3)'}`,
-                  }}
-                >
-                  {sale.seller_name}
-                </span>
-                <div className="col-span-2 sm:col-span-1">
-                  <p className="text-sm font-medium text-white truncate">{sale.product_name}</p>
-                  {sale.customer_name && (
-                    <p className="text-xs text-gray-500 truncate">{sale.customer_name}</p>
-                  )}
-                </div>
-                <span className="text-sm font-semibold text-white">{formatARS(sale.sale_price)}</span>
-                <span className="text-sm font-semibold text-emerald-400">{formatARS(sale.net_profit)}</span>
-                <span className="text-sm text-blue-400">{formatARS(sale.machine_fund_contribution)}</span>
-                <div className="flex justify-end">
-                  <DeleteSaleButton saleId={sale.id} productName={sale.product_name} />
-                </div>
-              </div>
+                sale={sale}
+                isLast={idx === sales.length - 1}
+              />
             ))}
           </div>
         </div>

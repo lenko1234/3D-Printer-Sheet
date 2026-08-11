@@ -1,0 +1,192 @@
+'use client'
+
+import { useState } from 'react'
+import type { Sale } from '@/types/database'
+import { formatARS } from '@/lib/calculations'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { ChevronDown, ChevronUp, User, FileText } from 'lucide-react'
+import DeleteSaleButton from './DeleteSaleButton'
+
+interface Props {
+  sale: Sale
+  isLast: boolean
+}
+
+export default function SalesTableRow({ sale, isLast }: Props) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div
+      className="flex flex-col transition-colors"
+      style={{
+        borderBottom: !isLast ? '1px solid rgba(55,65,81,0.3)' : 'none',
+      }}
+    >
+      {/* Fila principal */}
+      <div
+        onClick={() => setExpanded((prev) => !prev)}
+        className={`grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.2fr_1fr_1fr_1fr_auto] gap-3 px-4 py-3.5 items-center cursor-pointer transition-colors ${
+          expanded ? 'bg-gray-800/40' : 'hover:bg-gray-800/25'
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="p-1 rounded text-gray-500 hover:text-indigo-300 transition-colors"
+            title={expanded ? 'Ocultar detalles' : 'Ver detalles'}
+          >
+            {expanded ? (
+              <ChevronUp className="w-4 h-4 text-indigo-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+          <span className="text-sm text-gray-300 font-medium">
+            {format(new Date(sale.sale_date), 'dd/MM/yy', { locale: es })}
+          </span>
+        </div>
+
+        <span
+          className="badge w-fit"
+          style={{
+            background:
+              sale.seller_name === 'Rober'
+                ? 'rgba(124,58,237,0.2)'
+                : 'rgba(16,185,129,0.2)',
+            color: sale.seller_name === 'Rober' ? '#a78bfa' : '#6ee7b7',
+            border: `1px solid ${
+              sale.seller_name === 'Rober'
+                ? 'rgba(124,58,237,0.3)'
+                : 'rgba(16,185,129,0.3)'
+            }`,
+          }}
+        >
+          {sale.seller_name}
+        </span>
+
+        <div className="col-span-2 sm:col-span-1">
+          <p className="text-sm font-semibold text-white truncate">{sale.product_name}</p>
+          {sale.customer_name && (
+            <p className="text-xs text-gray-500 truncate">{sale.customer_name}</p>
+          )}
+        </div>
+
+        <span className="text-sm font-semibold text-white">{formatARS(sale.sale_price)}</span>
+        <span className="text-sm font-bold text-emerald-400">{formatARS(sale.net_profit)}</span>
+        <span className="text-sm text-blue-400">{formatARS(sale.machine_fund_contribution)}</span>
+
+        <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+          <DeleteSaleButton saleId={sale.id} productName={sale.product_name} />
+        </div>
+      </div>
+
+      {/* Desplegable de detalles */}
+      {expanded && (
+        <div
+          className="px-5 py-4 flex flex-col gap-4 animate-fade-in border-t"
+          style={{
+            background: 'rgba(20,20,40,0.6)',
+            borderColor: 'rgba(99,102,241,0.2)',
+          }}
+        >
+          {/* Tarjeta de Reparto de Ganancias */}
+          <div>
+            <p className="text-xs font-semibold text-indigo-300 uppercase tracking-wider mb-2">
+              💰 Reparto de Ganancia Neta ({formatARS(sale.net_profit)})
+            </p>
+            <div className="grid grid-cols-2 gap-3 max-w-md">
+              <div
+                className="p-3 rounded-xl flex flex-col gap-1"
+                style={{
+                  background: 'rgba(124,58,237,0.15)',
+                  border: '1px solid rgba(124,58,237,0.3)',
+                }}
+              >
+                <span className="text-xs text-purple-300 font-medium">
+                  Rober {sale.seller_name === 'Rober' ? '(Vendedor 70%)' : '(Socio 20%)'}
+                </span>
+                <span className="text-base font-bold text-purple-200">
+                  {formatARS(sale.rober_share)}
+                </span>
+              </div>
+              <div
+                className="p-3 rounded-xl flex flex-col gap-1"
+                style={{
+                  background: 'rgba(16,185,129,0.15)',
+                  border: '1px solid rgba(16,185,129,0.3)',
+                }}
+              >
+                <span className="text-xs text-emerald-300 font-medium">
+                  Cris {sale.seller_name === 'Cris' ? '(Vendedor 80%)' : '(Socio 30%)'}
+                </span>
+                <span className="text-base font-bold text-emerald-200">
+                  {formatARS(sale.cris_share)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Desglose de Costos */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl pt-2 border-t border-gray-800/60 text-xs">
+            <div className="flex flex-col gap-1.5">
+              <p className="font-semibold text-gray-300 uppercase tracking-wider text-[11px] mb-1">
+                Desglose de la Venta
+              </p>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Precio Venta Total:</span>
+                <span className="font-bold text-white">{formatARS(sale.sale_price)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">− Costo Producción:</span>
+                <span className="font-semibold text-red-400">−{formatARS(sale.total_cost)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">− Fondo Impresora:</span>
+                <span className="font-semibold text-blue-400">−{formatARS(sale.machine_fund_contribution)}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <p className="font-semibold text-gray-300 uppercase tracking-wider text-[11px] mb-1">
+                Detalle de Costos de Producción
+              </p>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Filamento:</span>
+                <span className="text-gray-200">{formatARS(sale.cost_filament)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Electricidad:</span>
+                <span className="text-gray-200">{formatARS(sale.cost_electricity)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Embalaje:</span>
+                <span className="text-gray-200">{formatARS(sale.cost_labor)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Cliente y Notas si existen */}
+          {(sale.customer_name || sale.notes) && (
+            <div className="flex flex-wrap gap-4 pt-2 border-t border-gray-800/60 text-xs">
+              {sale.customer_name && (
+                <div className="flex items-center gap-1.5 text-gray-300">
+                  <User className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="text-gray-400">Cliente:</span>
+                  <span className="font-medium text-white">{sale.customer_name}</span>
+                </div>
+              )}
+              {sale.notes && (
+                <div className="flex items-center gap-1.5 text-gray-300">
+                  <FileText className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="text-gray-400">Notas:</span>
+                  <span className="font-medium text-white">{sale.notes}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
