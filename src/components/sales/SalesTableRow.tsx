@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import type { Sale } from '@/types/database'
 import { formatARS } from '@/lib/calculations'
+import { toggleSaleDistributed } from '@/lib/actions'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronDown, ChevronUp, User, FileText } from 'lucide-react'
+import { ChevronDown, ChevronUp, User, FileText, CheckCircle2, Clock, Loader2 } from 'lucide-react'
 import DeleteSaleButton from './DeleteSaleButton'
 
 interface Props {
@@ -15,6 +17,25 @@ interface Props {
 
 export default function SalesTableRow({ sale, isLast }: Props) {
   const [expanded, setExpanded] = useState(false)
+  const [isDistributed, setIsDistributed] = useState(sale.is_distributed ?? false)
+  const [isPending, startTransition] = useTransition()
+  const router = useRouter()
+
+  function handleToggleDistributed(e: React.MouseEvent) {
+    e.stopPropagation()
+    const nextState = !isDistributed
+    setIsDistributed(nextState)
+
+    startTransition(async () => {
+      try {
+        await toggleSaleDistributed(sale.id, nextState)
+        router.refresh()
+      } catch (err) {
+        setIsDistributed(!nextState)
+        alert(err instanceof Error ? err.message : 'Error actualizando estado')
+      }
+    })
+  }
 
   return (
     <div
@@ -47,23 +68,34 @@ export default function SalesTableRow({ sale, isLast }: Props) {
           </span>
         </div>
 
-        <span
-          className="badge w-fit"
-          style={{
-            background:
-              sale.seller_name === 'Rober'
-                ? 'rgba(124,58,237,0.2)'
-                : 'rgba(16,185,129,0.2)',
-            color: sale.seller_name === 'Rober' ? '#a78bfa' : '#6ee7b7',
-            border: `1px solid ${
-              sale.seller_name === 'Rober'
-                ? 'rgba(124,58,237,0.3)'
-                : 'rgba(16,185,129,0.3)'
-            }`,
-          }}
-        >
-          {sale.seller_name}
-        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span
+            className="badge w-fit"
+            style={{
+              background:
+                sale.seller_name === 'Rober'
+                  ? 'rgba(124,58,237,0.2)'
+                  : 'rgba(16,185,129,0.2)',
+              color: sale.seller_name === 'Rober' ? '#a78bfa' : '#6ee7b7',
+              border: `1px solid ${
+                sale.seller_name === 'Rober'
+                  ? 'rgba(124,58,237,0.3)'
+                  : 'rgba(16,185,129,0.3)'
+              }`,
+            }}
+          >
+            {sale.seller_name}
+          </span>
+          <span
+            className={`text-[10px] font-bold px-1.5 py-0.5 rounded border transition-colors ${
+              isDistributed
+                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+            }`}
+          >
+            {isDistributed ? '✓ Repartido' : 'A repartir'}
+          </span>
+        </div>
 
         <div className="col-span-2 sm:col-span-1">
           <p className="text-sm font-semibold text-white truncate">{sale.product_name}</p>
@@ -90,40 +122,62 @@ export default function SalesTableRow({ sale, isLast }: Props) {
             borderColor: 'rgba(99,102,241,0.2)',
           }}
         >
-          {/* Tarjeta de Reparto de Ganancias */}
-          <div>
-            <p className="text-xs font-semibold text-indigo-300 uppercase tracking-wider mb-2">
+          {/* Encabezado Reparto con botón toggle */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold text-indigo-300 uppercase tracking-wider">
               💰 Reparto de Ganancia Neta ({formatARS(sale.net_profit)})
             </p>
-            <div className="grid grid-cols-2 gap-3 max-w-md">
-              <div
-                className="p-3 rounded-xl flex flex-col gap-1"
-                style={{
-                  background: 'rgba(124,58,237,0.15)',
-                  border: '1px solid rgba(124,58,237,0.3)',
-                }}
-              >
-                <span className="text-xs text-purple-300 font-medium">
-                  Rober {sale.seller_name === 'Rober' ? '(Vendedor 70%)' : '(Socio 20%)'}
-                </span>
-                <span className="text-base font-bold text-purple-200">
-                  {formatARS(sale.rober_share)}
-                </span>
-              </div>
-              <div
-                className="p-3 rounded-xl flex flex-col gap-1"
-                style={{
-                  background: 'rgba(16,185,129,0.15)',
-                  border: '1px solid rgba(16,185,129,0.3)',
-                }}
-              >
-                <span className="text-xs text-emerald-300 font-medium">
-                  Cris {sale.seller_name === 'Cris' ? '(Vendedor 80%)' : '(Socio 30%)'}
-                </span>
-                <span className="text-base font-bold text-emerald-200">
-                  {formatARS(sale.cris_share)}
-                </span>
-              </div>
+            <button
+              type="button"
+              onClick={handleToggleDistributed}
+              disabled={isPending}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                isDistributed
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
+                  : 'bg-amber-500/15 text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
+              }`}
+              title="Hacé click para cambiar el estado del reparto"
+            >
+              {isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : isDistributed ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+              )}
+              <span>{isDistributed ? 'Repartido' : 'A repartir'}</span>
+            </button>
+          </div>
+
+          {/* Tarjetas de Reparto */}
+          <div className="grid grid-cols-2 gap-3 max-w-md">
+            <div
+              className="p-3 rounded-xl flex flex-col gap-1"
+              style={{
+                background: 'rgba(124,58,237,0.15)',
+                border: '1px solid rgba(124,58,237,0.3)',
+              }}
+            >
+              <span className="text-xs text-purple-300 font-medium">
+                Rober {sale.seller_name === 'Rober' ? '(Vendedor 70%)' : '(Socio 20%)'}
+              </span>
+              <span className="text-base font-bold text-purple-200">
+                {formatARS(sale.rober_share)}
+              </span>
+            </div>
+            <div
+              className="p-3 rounded-xl flex flex-col gap-1"
+              style={{
+                background: 'rgba(16,185,129,0.15)',
+                border: '1px solid rgba(16,185,129,0.3)',
+              }}
+            >
+              <span className="text-xs text-emerald-300 font-medium">
+                Cris {sale.seller_name === 'Cris' ? '(Vendedor 80%)' : '(Socio 30%)'}
+              </span>
+              <span className="text-base font-bold text-emerald-200">
+                {formatARS(sale.cris_share)}
+              </span>
             </div>
           </div>
 

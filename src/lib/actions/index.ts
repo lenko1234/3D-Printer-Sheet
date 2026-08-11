@@ -120,6 +120,20 @@ export async function deleteSale(id: string) {
   revalidatePath('/sales')
 }
 
+export async function toggleSaleDistributed(id: string, isDistributed: boolean) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('sales')
+    .update({ is_distributed: isDistributed })
+    .eq('id', id)
+
+  if (error) throw new Error(`Error actualizando estado de reparto: ${error.message}`)
+
+  revalidatePath('/dashboard')
+  revalidatePath('/sales')
+}
+
 // ============================================================
 // ESTADÍSTICAS PARA EL DASHBOARD
 // ============================================================

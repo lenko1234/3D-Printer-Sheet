@@ -71,6 +71,7 @@ export interface Sale {
   rober_share: number
   cris_share: number
   notes: string | null
+  is_distributed: boolean
   created_at: string
 }
 
