@@ -267,6 +267,70 @@ export async function deleteProduct(id: string) {
   revalidatePath('/calculator')
 }
 
+export interface UpdateProductInput {
+  id: string
+  name: string
+  description?: string
+  materials: { material_id: string; weight_grams: number }[]
+  print_hours: number
+  cost_filament: number
+  cost_electricity: number
+  cost_machine: number
+  cost_labor: number
+  calculated_cost: number
+  suggested_price: number
+  margin: number
+}
+
+export async function updateProduct(input: UpdateProductInput) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) throw new Error('No autenticado')
+
+  const totalWeight = input.materials.reduce((s, m) => s + m.weight_grams, 0)
+
+  const { data: product, error: pErr } = await supabase
+    .from('products')
+    .update({
+      name: input.name,
+      description: input.description || null,
+      weight_grams: totalWeight,
+      print_hours: input.print_hours,
+      cost_filament: input.cost_filament,
+      cost_electricity: input.cost_electricity,
+      cost_machine: input.cost_machine,
+      cost_labor: input.cost_labor,
+      calculated_cost: input.calculated_cost,
+      suggested_price: input.suggested_price,
+      margin: input.margin,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.id)
+    .select()
+    .single()
+
+  if (pErr) throw new Error(`Error actualizando producto: ${pErr.message}`)
+
+  await supabase.from('product_materials').delete().eq('product_id', input.id)
+
+  if (input.materials.length > 0) {
+    const { error: mErr } = await supabase.from('product_materials').insert(
+      input.materials.map((m) => ({
+        product_id: input.id,
+        material_id: m.material_id,
+        weight_grams: m.weight_grams,
+      })),
+    )
+    if (mErr) throw new Error(`Error guardando materiales del producto: ${mErr.message}`)
+  }
+
+  revalidatePath('/calculator')
+  return product
+}
+
 // ============================================================
 // OBTENER VENTAS CON FILTROS
 // ============================================================

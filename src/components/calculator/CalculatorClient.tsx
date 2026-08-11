@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { calculatePieceCost, formatARS } from '@/lib/calculations'
-import { saveProduct, deleteProduct, getMaterials, getProducts } from '@/lib/actions'
+import { saveProduct, deleteProduct, updateProduct, getMaterials, getProducts } from '@/lib/actions'
 import type { Material, MaterialInput, SettingsMap, Product } from '@/types/database'
 import {
   Plus, Trash2, Save, ShoppingCart, Calculator,
-  Package, Zap, Wrench, ChevronRight, X,
+  Package, Zap, Wrench, ChevronRight, X, Check,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -15,6 +15,15 @@ interface MaterialRow {
   id: string
   material_id: string
   weight_grams: number
+}
+
+interface DraftState {
+  rows: MaterialRow[]
+  printHours: number
+  margin: number
+  laborPerPiece: number
+  customSuggestedPrice: number | null
+  productName: string
 }
 
 interface Props {
@@ -41,6 +50,11 @@ export default function CalculatorClient({
   const [productName, setProductName] = useState('')
   const [saving, setSaving] = useState(false)
   const [savedMsg, setSavedMsg] = useState(false)
+
+  // Estado para edición de producto existente del catálogo
+  const [editingProductId, setEditingProductId] = useState<string | null>(null)
+  const [draftState, setDraftState] = useState<DraftState | null>(null)
+  const catalogRef = useRef<HTMLDivElement>(null)
 
   const supabase = createClient()
 
@@ -78,12 +92,121 @@ export default function CalculatorClient({
     )
   }
 
-  async function handleSave() {
+  const saveCurrentEditingProduct = useCallback(async (id: string) => {
     if (!productName.trim()) return
-    setSaving(true)
     const costProduction = breakdown.cost_filament + breakdown.cost_electricity + breakdown.cost_labor
     const effectiveMargin = costProduction > 0 ? (finalSuggestedPrice - costProduction) / costProduction : margin
     try {
+      await updateProduct({
+        id,
+        name: productName.trim(),
+        materials: rows
+          .filter((r) => r.material_id && r.weight_grams > 0)
+          .map((r) => ({ material_id: r.material_id, weight_grams: r.weight_grams })),
+        print_hours: printHours,
+        cost_filament: breakdown.cost_filament,
+        cost_electricity: breakdown.cost_electricity,
+        cost_machine: breakdown.cost_machine,
+        cost_labor: breakdown.cost_labor,
+        calculated_cost: costProduction,
+        suggested_price: finalSuggestedPrice,
+        margin: effectiveMargin,
+      })
+      const fresh = await getProducts()
+      setProducts(fresh as Product[])
+    } catch (err) {
+      console.error('Error actualizando producto:', err)
+    }
+  }, [productName, breakdown, finalSuggestedPrice, margin, rows, printHours])
+
+  const exitEditingMode = useCallback(async () => {
+    if (!editingProductId) return
+    const idToSave = editingProductId
+    setEditingProductId(null)
+
+    await saveCurrentEditingProduct(idToSave)
+
+    if (draftState) {
+      setRows(draftState.rows)
+      setPrintHours(draftState.printHours)
+      setMargin(draftState.margin)
+      setLaborPerPiece(draftState.laborPerPiece)
+      setCustomSuggestedPrice(draftState.customSuggestedPrice)
+      setProductName(draftState.productName)
+      setDraftState(null)
+    }
+  }, [editingProductId, saveCurrentEditingProduct, draftState])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (!editingProductId) return
+      const target = e.target as HTMLElement
+      if (catalogRef.current && !catalogRef.current.contains(target)) {
+        exitEditingMode()
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [editingProductId, exitEditingMode])
+
+  async function handleSelectProduct(p: Product) {
+    if (editingProductId === p.id) {
+      await exitEditingMode()
+      return
+    }
+
+    if (editingProductId) {
+      await saveCurrentEditingProduct(editingProductId)
+    } else {
+      setDraftState({
+        rows,
+        printHours,
+        margin,
+        laborPerPiece,
+        customSuggestedPrice,
+        productName,
+      })
+    }
+
+    setEditingProductId(p.id)
+    setProductName(p.name)
+    setPrintHours(p.print_hours)
+    setMargin(p.margin)
+    setLaborPerPiece(p.cost_labor)
+    setCustomSuggestedPrice(p.suggested_price)
+
+    if (p.product_materials && p.product_materials.length > 0) {
+      setRows(
+        p.product_materials.map((pm) => ({
+          id: crypto.randomUUID(),
+          material_id: pm.material_id,
+          weight_grams: pm.weight_grams,
+        })),
+      )
+    } else {
+      setRows([
+        {
+          id: crypto.randomUUID(),
+          material_id: materials[0]?.id ?? '',
+          weight_grams: p.weight_grams || 0,
+        },
+      ])
+    }
+  }
+
+  async function handleSave() {
+    if (!productName.trim()) return
+    setSaving(true)
+    try {
+      if (editingProductId) {
+        await exitEditingMode()
+        setSavedMsg(true)
+        setTimeout(() => setSavedMsg(false), 3000)
+        return
+      }
+      const costProduction = breakdown.cost_filament + breakdown.cost_electricity + breakdown.cost_labor
+      const effectiveMargin = costProduction > 0 ? (finalSuggestedPrice - costProduction) / costProduction : margin
       await saveProduct({
         name: productName.trim(),
         materials: rows
@@ -299,11 +422,23 @@ export default function CalculatorClient({
 
           {/* Guardar en catálogo */}
           <div className="flex flex-col gap-2">
+            {editingProductId && (
+              <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-indigo-950/60 border border-indigo-500/30 text-xs text-indigo-300">
+                <span>✏️ Editando: <strong>{productName}</strong></span>
+                <button
+                  type="button"
+                  onClick={exitEditingMode}
+                  className="text-xs text-indigo-400 hover:text-indigo-200 underline cursor-pointer"
+                >
+                  Guardar y Volver
+                </button>
+              </div>
+            )}
             <input
               type="text"
               value={productName}
               onChange={(e) => setProductName(e.target.value)}
-              placeholder="Nombre del producto para guardar..."
+              placeholder="Nombre del producto..."
               className="text-sm"
             />
             <button
@@ -312,17 +447,23 @@ export default function CalculatorClient({
               disabled={saving || !productName.trim() || materialInputs.length === 0}
               className="btn btn-primary"
             >
-              <Save className="w-4 h-4" />
-              {saving ? 'Guardando...' : 'Guardar en Catálogo'}
+              {editingProductId ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+              {saving
+                ? 'Guardando...'
+                : editingProductId
+                ? 'Guardar Cambios'
+                : 'Guardar en Catálogo'}
             </button>
             {savedMsg && (
-              <p className="text-xs text-emerald-400 text-center">✓ Producto guardado en el catálogo</p>
+              <p className="text-xs text-emerald-400 text-center">
+                ✓ {editingProductId ? 'Producto actualizado' : 'Producto guardado en el catálogo'}
+              </p>
             )}
           </div>
         </div>
 
         {/* ── Catálogo ── */}
-        <div className="glass-card p-5 flex flex-col gap-4">
+        <div ref={catalogRef} className="glass-card p-5 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Package className="w-5 h-5 text-emerald-400" />
@@ -341,40 +482,61 @@ export default function CalculatorClient({
             </div>
           ) : (
             <div className="flex flex-col gap-2 overflow-y-auto max-h-[520px] pr-1">
-              {products.map((p) => (
-                <div
-                  key={p.id}
-                  className="relative flex items-center justify-between gap-3 p-3 pr-8 rounded-xl transition-colors hover:bg-gray-800/40 group"
-                  style={{ border: '1px solid rgba(55,65,81,0.4)' }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteProduct(p.id)}
-                    className="absolute top-2.5 right-2.5 w-5 h-5 flex items-center justify-center rounded-md text-gray-500 hover:text-red-400 hover:bg-red-950/50 transition-all opacity-60 group-hover:opacity-100"
-                    title="Eliminar producto del catálogo"
+              {products.map((p) => {
+                const isEditingThis = editingProductId === p.id
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => handleSelectProduct(p)}
+                    className={`relative flex items-center justify-between gap-3 p-3 pr-8 rounded-xl transition-all cursor-pointer group ${
+                      isEditingThis
+                        ? 'ring-2 ring-indigo-500 bg-indigo-950/50 shadow-lg shadow-indigo-950/50'
+                        : 'hover:bg-gray-800/40'
+                    }`}
+                    style={{
+                      border: isEditingThis ? '1px solid rgba(129,140,248,0.7)' : '1px solid rgba(55,65,81,0.4)',
+                    }}
                   >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{p.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {p.weight_grams}g · {p.print_hours}h · Margen {Math.round(p.margin * 100)}%
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Costo Producción: {formatARS(p.cost_filament + p.cost_electricity + p.cost_labor)}
-                    </p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-base font-bold text-indigo-300">{formatARS(p.suggested_price)}</p>
-                    <Link
-                      href={`/sales/new?product_id=${p.id}&product_name=${encodeURIComponent(p.name)}&sale_price=${p.suggested_price}&total_cost=${p.cost_filament + p.cost_electricity + p.cost_labor}&cost_filament=${p.cost_filament}&cost_electricity=${p.cost_electricity}&cost_machine=${p.cost_machine}&cost_labor=${p.cost_labor}`}
-                      className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteProduct(p.id)
+                      }}
+                      className="absolute top-2.5 right-2.5 w-5 h-5 flex items-center justify-center rounded-md text-gray-500 hover:text-red-400 hover:bg-red-950/50 transition-all opacity-60 group-hover:opacity-100 z-10"
+                      title="Eliminar producto del catálogo"
                     >
-                      <ShoppingCart className="w-3 h-3" /> Vender
-                    </Link>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-white truncate">{p.name}</p>
+                        {isEditingThis && (
+                          <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                            Editando
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {p.weight_grams}g · {p.print_hours}h · Margen {Math.round(p.margin * 100)}%
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Costo Producción: {formatARS(p.cost_filament + p.cost_electricity + p.cost_labor)}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-base font-bold text-indigo-300">{formatARS(p.suggested_price)}</p>
+                      <Link
+                        href={`/sales/new?product_id=${p.id}&product_name=${encodeURIComponent(p.name)}&sale_price=${p.suggested_price}&total_cost=${p.cost_filament + p.cost_electricity + p.cost_labor}&cost_filament=${p.cost_filament}&cost_electricity=${p.cost_electricity}&cost_machine=${p.cost_machine}&cost_labor=${p.cost_labor}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+                      >
+                        <ShoppingCart className="w-3 h-3" /> Vender
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
