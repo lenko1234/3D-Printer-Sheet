@@ -54,7 +54,8 @@ export default function CalculatorClient({
   // Estado para edición de producto existente del catálogo
   const [editingProductId, setEditingProductId] = useState<string | null>(null)
   const [draftState, setDraftState] = useState<DraftState | null>(null)
-  const catalogRef = useRef<HTMLDivElement>(null)
+  const calculatorCardRef = useRef<HTMLDivElement>(null)
+  const activeCardRef = useRef<HTMLDivElement>(null)
 
   const supabase = createClient()
 
@@ -75,6 +76,33 @@ export default function CalculatorClient({
   const finalSuggestedPrice = customSuggestedPrice !== null ? customSuggestedPrice : breakdown.suggested_price
   const totalWeight = rows.reduce((s, r) => s + (r.weight_grams || 0), 0)
 
+  // Ref que mantiene el estado actual siempre fresco para event listeners y callbacks async
+  const currentStateRef = useRef({
+    editingProductId,
+    productName,
+    rows,
+    printHours,
+    margin,
+    laborPerPiece,
+    customSuggestedPrice,
+    finalSuggestedPrice,
+    draftState,
+  })
+
+  useEffect(() => {
+    currentStateRef.current = {
+      editingProductId,
+      productName,
+      rows,
+      printHours,
+      margin,
+      laborPerPiece,
+      customSuggestedPrice,
+      finalSuggestedPrice,
+      draftState,
+    }
+  })
+
   function addRow() {
     setRows((prev) => [
       ...prev,
@@ -93,79 +121,105 @@ export default function CalculatorClient({
   }
 
   const saveCurrentEditingProduct = useCallback(async (id: string) => {
-    if (!productName.trim()) return
-    const costProduction = breakdown.cost_filament + breakdown.cost_electricity + breakdown.cost_labor
-    const effectiveMargin = costProduction > 0 ? (finalSuggestedPrice - costProduction) / costProduction : margin
+    const curr = currentStateRef.current
+    const nameToSave = curr.productName.trim()
+    if (!nameToSave) return
+
+    const matInputs: MaterialInput[] = curr.rows
+      .filter((r) => r.material_id && r.weight_grams > 0)
+      .map((r) => {
+        const mat = materials.find((m) => m.id === r.material_id)
+        return {
+          material_id: r.material_id,
+          weight_grams: r.weight_grams,
+          price_per_kg: mat?.price_per_kg ?? 0,
+        }
+      })
+
+    const b = calculatePieceCost(matInputs, curr.printHours, settings, curr.margin, curr.laborPerPiece)
+    const priceToSave = curr.customSuggestedPrice !== null ? curr.customSuggestedPrice : b.suggested_price
+    const costProd = b.cost_filament + b.cost_electricity + b.cost_labor
+    const effMargin = costProd > 0 ? (priceToSave - costProd) / costProd : curr.margin
+
     try {
       await updateProduct({
         id,
-        name: productName.trim(),
-        materials: rows
+        name: nameToSave,
+        materials: curr.rows
           .filter((r) => r.material_id && r.weight_grams > 0)
           .map((r) => ({ material_id: r.material_id, weight_grams: r.weight_grams })),
-        print_hours: printHours,
-        cost_filament: breakdown.cost_filament,
-        cost_electricity: breakdown.cost_electricity,
-        cost_machine: breakdown.cost_machine,
-        cost_labor: breakdown.cost_labor,
-        calculated_cost: costProduction,
-        suggested_price: finalSuggestedPrice,
-        margin: effectiveMargin,
+        print_hours: curr.printHours,
+        cost_filament: b.cost_filament,
+        cost_electricity: b.cost_electricity,
+        cost_machine: b.cost_machine,
+        cost_labor: b.cost_labor,
+        calculated_cost: costProd,
+        suggested_price: priceToSave,
+        margin: effMargin,
       })
       const fresh = await getProducts()
       setProducts(fresh as Product[])
     } catch (err) {
       console.error('Error actualizando producto:', err)
     }
-  }, [productName, breakdown, finalSuggestedPrice, margin, rows, printHours])
+  }, [materials, settings])
 
   const exitEditingMode = useCallback(async () => {
-    if (!editingProductId) return
-    const idToSave = editingProductId
+    const curr = currentStateRef.current
+    if (!curr.editingProductId) return
+
+    const idToSave = curr.editingProductId
     setEditingProductId(null)
 
     await saveCurrentEditingProduct(idToSave)
 
-    if (draftState) {
-      setRows(draftState.rows)
-      setPrintHours(draftState.printHours)
-      setMargin(draftState.margin)
-      setLaborPerPiece(draftState.laborPerPiece)
-      setCustomSuggestedPrice(draftState.customSuggestedPrice)
-      setProductName(draftState.productName)
+    const d = curr.draftState
+    if (d) {
+      setRows(d.rows)
+      setPrintHours(d.printHours)
+      setMargin(d.margin)
+      setLaborPerPiece(d.laborPerPiece)
+      setCustomSuggestedPrice(d.customSuggestedPrice)
+      setProductName(d.productName)
       setDraftState(null)
     }
-  }, [editingProductId, saveCurrentEditingProduct, draftState])
+  }, [saveCurrentEditingProduct])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (!editingProductId) return
+      const curr = currentStateRef.current
+      if (!curr.editingProductId) return
+
       const target = e.target as HTMLElement
-      if (catalogRef.current && !catalogRef.current.contains(target)) {
+      const isInsideCalculator = calculatorCardRef.current?.contains(target)
+      const isInsideActiveCard = activeCardRef.current?.contains(target)
+
+      if (!isInsideCalculator && !isInsideActiveCard) {
         exitEditingMode()
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [editingProductId, exitEditingMode])
+  }, [exitEditingMode])
 
   async function handleSelectProduct(p: Product) {
-    if (editingProductId === p.id) {
+    const curr = currentStateRef.current
+    if (curr.editingProductId === p.id) {
       await exitEditingMode()
       return
     }
 
-    if (editingProductId) {
-      await saveCurrentEditingProduct(editingProductId)
+    if (curr.editingProductId) {
+      await saveCurrentEditingProduct(curr.editingProductId)
     } else {
       setDraftState({
-        rows,
-        printHours,
-        margin,
-        laborPerPiece,
-        customSuggestedPrice,
-        productName,
+        rows: curr.rows,
+        printHours: curr.printHours,
+        margin: curr.margin,
+        laborPerPiece: curr.laborPerPiece,
+        customSuggestedPrice: curr.customSuggestedPrice,
+        productName: curr.productName,
       })
     }
 
@@ -246,7 +300,7 @@ export default function CalculatorClient({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* ── Calculadora ── */}
-        <div className="glass-card p-5 flex flex-col gap-5">
+        <div ref={calculatorCardRef} className="glass-card p-5 flex flex-col gap-5">
           <div className="flex items-center gap-2">
             <Calculator className="w-5 h-5 text-indigo-400" />
             <h2 className="text-base font-bold text-white">Calculadora de Costos</h2>
@@ -463,7 +517,7 @@ export default function CalculatorClient({
         </div>
 
         {/* ── Catálogo ── */}
-        <div ref={catalogRef} className="glass-card p-5 flex flex-col gap-4">
+        <div className="glass-card p-5 flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Package className="w-5 h-5 text-emerald-400" />
@@ -487,6 +541,7 @@ export default function CalculatorClient({
                 return (
                   <div
                     key={p.id}
+                    ref={isEditingThis ? activeCardRef : null}
                     onClick={() => handleSelectProduct(p)}
                     className={`relative flex items-center justify-between gap-3 p-3 pr-8 rounded-xl transition-all cursor-pointer group ${
                       isEditingThis
