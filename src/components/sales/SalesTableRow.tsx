@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Sale, SellerName } from '@/types/database'
+import type { Sale } from '@/types/database'
 import { formatARS } from '@/lib/calculations'
-import { toggleSaleDistributed, updateSaleSeller } from '@/lib/actions'
+import { toggleSaleDistributed, updateSaleCustomer } from '@/lib/actions'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronDown, ChevronUp, User, FileText, CheckCircle2, Clock, Loader2, UserCheck } from 'lucide-react'
+import { ChevronDown, ChevronUp, User, FileText, CheckCircle2, Clock, Loader2 } from 'lucide-react'
 import DeleteSaleButton from './DeleteSaleButton'
 
 interface Props {
@@ -18,7 +18,7 @@ interface Props {
 export default function SalesTableRow({ sale, isLast }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [isDistributed, setIsDistributed] = useState(sale.is_distributed ?? false)
-  const [sellerName, setSellerName] = useState<SellerName>(sale.seller_name)
+  const [customerName, setCustomerName] = useState(sale.customer_name ?? '')
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
@@ -38,18 +38,15 @@ export default function SalesTableRow({ sale, isLast }: Props) {
     })
   }
 
-  function handleSellerChange(e: React.MouseEvent, newSeller: SellerName) {
-    e.stopPropagation()
-    if (newSeller === sellerName) return
-    setSellerName(newSeller)
-
+  function handleSaveCustomer(newCustomer: string) {
+    if (newCustomer === (sale.customer_name ?? '')) return
     startTransition(async () => {
       try {
-        await updateSaleSeller(sale.id, newSeller)
+        await updateSaleCustomer(sale.id, newCustomer)
         router.refresh()
       } catch (err) {
-        setSellerName(sale.seller_name)
-        alert(err instanceof Error ? err.message : 'Error actualizando vendedor')
+        setCustomerName(sale.customer_name ?? '')
+        alert(err instanceof Error ? err.message : 'Error actualizando cliente')
       }
     })
   }
@@ -90,19 +87,19 @@ export default function SalesTableRow({ sale, isLast }: Props) {
             className="badge w-fit"
             style={{
               background:
-              sellerName === 'Rober'
-                ? 'rgba(124,58,237,0.2)'
-                : 'rgba(16,185,129,0.2)',
-            color: sellerName === 'Rober' ? '#a78bfa' : '#6ee7b7',
-            border: `1px solid ${
-              sellerName === 'Rober'
-                ? 'rgba(124,58,237,0.3)'
-                : 'rgba(16,185,129,0.3)'
-            }`,
-          }}
-        >
-          {sellerName}
-        </span>
+                sale.seller_name === 'Rober'
+                  ? 'rgba(124,58,237,0.2)'
+                  : 'rgba(16,185,129,0.2)',
+              color: sale.seller_name === 'Rober' ? '#a78bfa' : '#6ee7b7',
+              border: `1px solid ${
+                sale.seller_name === 'Rober'
+                  ? 'rgba(124,58,237,0.3)'
+                  : 'rgba(16,185,129,0.3)'
+              }`,
+            }}
+          >
+            {sale.seller_name}
+          </span>
           <span
             className={`text-[10px] font-bold px-1.5 py-0.5 rounded border transition-colors ${
               isDistributed
@@ -116,9 +113,9 @@ export default function SalesTableRow({ sale, isLast }: Props) {
 
         <div className="col-span-2 sm:col-span-1">
           <p className="text-sm font-semibold text-white truncate">{sale.product_name}</p>
-          {sale.customer_name && (
-            <p className="text-xs text-gray-500 truncate">{sale.customer_name}</p>
-          )}
+          <p className="text-xs text-indigo-300/80 truncate">
+            {customerName ? `👤 ${customerName}` : '👤 Sin cliente'}
+          </p>
         </div>
 
         <span className="text-sm font-semibold text-white">{formatARS(sale.sale_price)}</span>
@@ -176,7 +173,7 @@ export default function SalesTableRow({ sale, isLast }: Props) {
               }}
             >
               <span className="text-xs text-purple-300 font-medium">
-                Rober {sellerName === 'Rober' ? '(Vendedor 70%)' : '(Socio 20%)'}
+                Rober {sale.seller_name === 'Rober' ? '(Vendedor 70%)' : '(Socio 20%)'}
               </span>
               <span className="text-base font-bold text-purple-200">
                 {formatARS(sale.rober_share)}
@@ -190,7 +187,7 @@ export default function SalesTableRow({ sale, isLast }: Props) {
               }}
             >
               <span className="text-xs text-emerald-300 font-medium">
-                Cris {sellerName === 'Cris' ? '(Vendedor 80%)' : '(Socio 30%)'}
+                Cris {sale.seller_name === 'Cris' ? '(Vendedor 80%)' : '(Socio 30%)'}
               </span>
               <span className="text-base font-bold text-emerald-200">
                 {formatARS(sale.cris_share)}
@@ -237,47 +234,36 @@ export default function SalesTableRow({ sale, isLast }: Props) {
             </div>
           </div>
 
-          {/* Vendedor de la Venta (Editable) */}
-          <div className="flex items-center gap-3 pt-2 border-t border-gray-800/60 text-xs">
-            <span className="font-semibold text-gray-300">Vendedor:</span>
-            <div className="flex items-center gap-1.5">
-              {(['Rober', 'Cris'] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={(e) => handleSellerChange(e, s)}
-                  disabled={isPending}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    sellerName === s
-                      ? s === 'Rober'
-                        ? 'bg-purple-600/40 text-purple-200 border border-purple-400 shadow-sm shadow-purple-500/20'
-                        : 'bg-emerald-600/40 text-emerald-200 border border-emerald-400 shadow-sm shadow-emerald-500/20'
-                      : 'bg-gray-800/60 text-gray-400 border border-gray-700 hover:text-white hover:bg-gray-700/60'
-                  }`}
-                >
-                  {s} {sellerName === s ? '✓' : ''}
-                </button>
-              ))}
+          {/* Cliente (Editable) */}
+          <div className="flex flex-col gap-1.5 pt-2 border-t border-gray-800/60 text-xs" onClick={(e) => e.stopPropagation()}>
+            <label className="font-semibold text-gray-300 flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-indigo-400" />
+              Cliente (editar):
+            </label>
+            <div className="flex items-center gap-2 max-w-sm">
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                onBlur={(e) => handleSaveCustomer(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur()
+                  }
+                }}
+                placeholder="Escribí el nombre del cliente..."
+                className="w-full bg-gray-900/90 border border-gray-700/80 rounded-lg px-3 py-1.5 text-white text-xs focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+              {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400 flex-shrink-0" />}
             </div>
           </div>
 
-          {/* Cliente y Notas si existen */}
-          {(sale.customer_name || sale.notes) && (
-            <div className="flex flex-wrap gap-4 pt-2 border-t border-gray-800/60 text-xs">
-              {sale.customer_name && (
-                <div className="flex items-center gap-1.5 text-gray-300">
-                  <User className="w-3.5 h-3.5 text-indigo-400" />
-                  <span className="text-gray-400">Cliente:</span>
-                  <span className="font-medium text-white">{sale.customer_name}</span>
-                </div>
-              )}
-              {sale.notes && (
-                <div className="flex items-center gap-1.5 text-gray-300">
-                  <FileText className="w-3.5 h-3.5 text-indigo-400" />
-                  <span className="text-gray-400">Notas:</span>
-                  <span className="font-medium text-white">{sale.notes}</span>
-                </div>
-              )}
+          {/* Notas si existen */}
+          {sale.notes && (
+            <div className="flex items-center gap-1.5 pt-2 border-t border-gray-800/60 text-xs text-gray-300">
+              <FileText className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="text-gray-400">Notas:</span>
+              <span className="font-medium text-white">{sale.notes}</span>
             </div>
           )}
         </div>

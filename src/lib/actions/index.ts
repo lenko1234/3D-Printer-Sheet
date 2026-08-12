@@ -379,30 +379,15 @@ export async function updateProduct(input: UpdateProductInput) {
   return product
 }
 
-export async function updateSaleSeller(id: string, sellerName: SellerName) {
+export async function updateSaleCustomer(id: string, customerName: string) {
   const supabase = await createClient()
 
-  const { data: sale, error: fetchErr } = await supabase
+  const { error } = await supabase
     .from('sales')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (fetchErr || !sale) throw new Error(`Venta no encontrada: ${fetchErr?.message}`)
-
-  // Recalcular repartos para el nuevo vendedor
-  const share = calculateProfitShare(sale.net_profit, sellerName)
-
-  const { error: updateErr } = await supabase
-    .from('sales')
-    .update({
-      seller_name: sellerName,
-      rober_share: share.rober,
-      cris_share: share.cris,
-    })
+    .update({ customer_name: customerName.trim() || null })
     .eq('id', id)
 
-  if (updateErr) throw new Error(`Error actualizando vendedor: ${updateErr.message}`)
+  if (error) throw new Error(`Error actualizando cliente: ${error.message}`)
 
   revalidatePath('/dashboard')
   revalidatePath('/sales')
