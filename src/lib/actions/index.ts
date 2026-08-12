@@ -146,6 +146,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     .from('sales')
     .select('*')
     .order('sale_date', { ascending: false })
+    .order('created_at', { ascending: false })
 
   if (error) throw new Error(`Error obteniendo ventas: ${error.message}`)
 
@@ -378,6 +379,35 @@ export async function updateProduct(input: UpdateProductInput) {
   return product
 }
 
+export async function updateSaleSeller(id: string, sellerName: SellerName) {
+  const supabase = await createClient()
+
+  const { data: sale, error: fetchErr } = await supabase
+    .from('sales')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (fetchErr || !sale) throw new Error(`Venta no encontrada: ${fetchErr?.message}`)
+
+  // Recalcular repartos para el nuevo vendedor
+  const share = calculateProfitShare(sale.net_profit, sellerName)
+
+  const { error: updateErr } = await supabase
+    .from('sales')
+    .update({
+      seller_name: sellerName,
+      rober_share: share.rober,
+      cris_share: share.cris,
+    })
+    .eq('id', id)
+
+  if (updateErr) throw new Error(`Error actualizando vendedor: ${updateErr.message}`)
+
+  revalidatePath('/dashboard')
+  revalidatePath('/sales')
+}
+
 // ============================================================
 // OBTENER VENTAS CON FILTROS
 // ============================================================
@@ -399,6 +429,7 @@ export async function getSales(filters?: {
     .from('sales')
     .select('*', { count: 'exact' })
     .order('sale_date', { ascending: false })
+    .order('created_at', { ascending: false })
     .range(from, to)
 
   if (filters?.seller && filters.seller !== 'all') {
