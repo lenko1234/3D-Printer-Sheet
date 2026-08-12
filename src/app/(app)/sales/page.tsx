@@ -88,7 +88,7 @@ export default async function SalesPage({ searchParams }: PageProps) {
       ) : (
         <div className="glass-card overflow-hidden">
           {/* Encabezado tabla desktop */}
-          <div className="hidden sm:grid grid-cols-[1fr_1fr_1.2fr_1fr_1fr_1fr_auto] gap-3 px-4 py-2.5 border-b text-xs font-medium text-gray-500 uppercase tracking-wider items-center"
+          <div className="hidden sm:grid grid-cols-[100px_130px_2.2fr_1fr_1fr_1fr_40px] gap-3 px-4 py-2.5 border-b text-xs font-medium text-gray-500 uppercase tracking-wider items-center"
             style={{ borderColor: 'rgba(55,65,81,0.5)' }}>
             <span>Fecha</span>
             <span>Vendedor</span>
@@ -96,7 +96,7 @@ export default async function SalesPage({ searchParams }: PageProps) {
             <span>Precio</span>
             <span>Ganancia</span>
             <span>Fondo Maq.</span>
-            <span className="w-7"></span>
+            <span className="w-6"></span>
           </div>
 
           <div className="flex flex-col">

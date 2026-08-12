@@ -61,7 +61,7 @@ export default function SalesTableRow({ sale, isLast }: Props) {
       {/* Fila principal */}
       <div
         onClick={() => setExpanded((prev) => !prev)}
-        className={`grid grid-cols-2 sm:grid-cols-[1fr_1fr_1.2fr_1fr_1fr_1fr_auto] gap-3 px-4 py-3.5 items-center cursor-pointer transition-colors ${
+        className={`grid grid-cols-2 sm:grid-cols-[100px_130px_2.2fr_1fr_1fr_1fr_40px] gap-3 px-4 py-3.5 items-center cursor-pointer transition-colors ${
           expanded ? 'bg-gray-800/40' : 'hover:bg-gray-800/25'
         }`}
       >
