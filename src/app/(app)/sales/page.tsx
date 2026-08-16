@@ -95,7 +95,7 @@ export default async function SalesPage({ searchParams }: PageProps) {
             <span>Producto</span>
             <span>Precio</span>
             <span>Ganancia</span>
-            <span>Fondo Maq.</span>
+            <span>% Ganancia</span>
             <span className="w-6"></span>
           </div>
 

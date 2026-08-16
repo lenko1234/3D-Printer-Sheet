@@ -7,8 +7,6 @@ import {
   TrendingUp,
   Banknote,
   ShoppingBag,
-  AlertCircle,
-  CheckCircle2,
   Printer,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
@@ -45,7 +43,7 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-6 animate-fade-in">
 
       {/* ── FILA 1: Métricas principales ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Total Facturado */}
         <StatCard
           label="Total Facturado"
@@ -70,20 +68,6 @@ export default async function DashboardPage() {
           color={isRober ? '#7c3aed' : '#10b981'}
           sub={isRober ? 'Rober vende 70% · recibe 20%' : 'Cris vende 80% · recibe 30%'}
           highlight
-        />
-        {/* Verificación */}
-        <StatCard
-          label="Control"
-          value={stats.control_check === 0 ? '✓ OK' : `⚠ ${stats.control_check}`}
-          icon={
-            stats.control_check === 0 ? (
-              <CheckCircle2 className="w-5 h-5" />
-            ) : (
-              <AlertCircle className="w-5 h-5" />
-            )
-          }
-          color={stats.control_check === 0 ? '#10b981' : '#ef4444'}
-          sub="Repartido − Rober − Cris = 0"
         />
       </div>
 

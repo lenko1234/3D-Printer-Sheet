@@ -125,6 +125,7 @@ export interface DashboardStats {
   pending_rober: number
   pending_cris: number
   pending_net_profit: number
+  pending_cris_transfer: number
   // Verificación
   control_check: number // debe ser 0
   // Ventas

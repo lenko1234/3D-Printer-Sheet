@@ -100,15 +100,6 @@ export default function SalesTableRow({ sale, isLast }: Props) {
           >
             {sale.seller_name}
           </span>
-          <span
-            className={`text-[10px] font-bold px-1.5 py-0.5 rounded border transition-colors ${
-              isDistributed
-                ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-            }`}
-          >
-            {isDistributed ? '✓ Repartido' : 'A repartir'}
-          </span>
         </div>
 
         <div className="col-span-2 sm:col-span-1">
@@ -120,7 +111,9 @@ export default function SalesTableRow({ sale, isLast }: Props) {
 
         <span className="text-sm font-semibold text-white">{formatARS(sale.sale_price)}</span>
         <span className="text-sm font-bold text-emerald-400">{formatARS(sale.net_profit)}</span>
-        <span className="text-sm text-blue-400">{formatARS(sale.machine_fund_contribution)}</span>
+        <span className="text-sm font-semibold text-emerald-300">
+          {sale.sale_price > 0 ? Math.round((sale.net_profit / sale.sale_price) * 100) : 0}%
+        </span>
 
         <div className="flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
           <DeleteSaleButton saleId={sale.id} productName={sale.product_name} />
@@ -193,6 +186,19 @@ export default function SalesTableRow({ sale, isLast }: Props) {
                 {formatARS(sale.cris_share)}
               </span>
             </div>
+          </div>
+
+          {/* Total a transferir a Cris */}
+          <div className="flex items-center justify-between p-2.5 px-3.5 rounded-xl border border-emerald-500/30 bg-emerald-950/30 max-w-md">
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-emerald-300">Total a transferir a Cris</span>
+              <span className="text-[10px] text-gray-400">
+                Cris: {formatARS(sale.cris_share)} · Costo: {formatARS(sale.total_cost)} · Impresora: {formatARS(sale.machine_fund_contribution)}
+              </span>
+            </div>
+            <span className="text-sm font-extrabold text-emerald-300">
+              {formatARS(sale.cris_share + sale.total_cost + sale.machine_fund_contribution)}
+            </span>
           </div>
 
           {/* Desglose de Costos */}

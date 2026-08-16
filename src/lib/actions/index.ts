@@ -168,6 +168,10 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const pending_rober = pendingSales.reduce((sum, s) => sum + s.rober_share, 0)
   const pending_cris = pendingSales.reduce((sum, s) => sum + s.cris_share, 0)
   const pending_net_profit = pendingSales.reduce((sum, s) => sum + s.net_profit, 0)
+  const pending_cris_transfer = pendingSales.reduce(
+    (sum, s) => sum + s.cris_share + s.total_cost + s.machine_fund_contribution,
+    0,
+  )
 
   // % impresora pagada
   const printer_paid_pct = machine_fund_accumulated / settings.printer_total_cost
@@ -192,6 +196,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     pending_rober: Math.round(pending_rober * 100) / 100,
     pending_cris: Math.round(pending_cris * 100) / 100,
     pending_net_profit: Math.round(pending_net_profit * 100) / 100,
+    pending_cris_transfer: Math.round(pending_cris_transfer * 100) / 100,
     control_check,
     sales_count: allSales.length,
     last_sales: allSales.slice(0, 5),

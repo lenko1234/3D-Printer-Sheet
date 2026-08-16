@@ -255,26 +255,39 @@ export default function SaleForm({ userProfile }: Props) {
 
         {/* Splits */}
         {net_profit > 0 && (
-          <div className="grid grid-cols-2 gap-2 mt-1 pt-2 border-t" style={{ borderColor: 'rgba(55,65,81,0.4)' }}>
-            <div
-              className="flex flex-col items-center p-2 rounded-lg"
-              style={{ background: 'rgba(124,58,237,0.15)' }}
-            >
-              <span className="text-xs text-gray-400 mb-0.5">
-                Rober {form.seller_name === 'Rober' ? '(70%)' : '(20%)'}
-              </span>
-              <span className="text-sm font-bold text-purple-300">{formatARS(roberShare)}</span>
+          <>
+            <div className="grid grid-cols-2 gap-2 mt-1 pt-2 border-t" style={{ borderColor: 'rgba(55,65,81,0.4)' }}>
+              <div
+                className="flex flex-col items-center p-2 rounded-lg"
+                style={{ background: 'rgba(124,58,237,0.15)' }}
+              >
+                <span className="text-xs text-gray-400 mb-0.5">
+                  Rober {form.seller_name === 'Rober' ? '(70%)' : '(20%)'}
+                </span>
+                <span className="text-sm font-bold text-purple-300">{formatARS(roberShare)}</span>
+              </div>
+              <div
+                className="flex flex-col items-center p-2 rounded-lg"
+                style={{ background: 'rgba(16,185,129,0.15)' }}
+              >
+                <span className="text-xs text-gray-400 mb-0.5">
+                  Cris {form.seller_name === 'Cris' ? '(80%)' : '(30%)'}
+                </span>
+                <span className="text-sm font-bold text-emerald-300">{formatARS(crisShare)}</span>
+              </div>
             </div>
-            <div
-              className="flex flex-col items-center p-2 rounded-lg"
-              style={{ background: 'rgba(16,185,129,0.15)' }}
-            >
-              <span className="text-xs text-gray-400 mb-0.5">
-                Cris {form.seller_name === 'Cris' ? '(80%)' : '(30%)'}
+            <div className="flex justify-between items-center pt-2 mt-1 border-t border-emerald-500/20">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-emerald-300">Total a transferir a Cris</span>
+                <span className="text-[10px] text-gray-400">
+                  Cris: {formatARS(crisShare)} · Costo: {formatARS(total_production_cost)} · Impresora: {formatARS(total_machine_cost)}
+                </span>
+              </div>
+              <span className="text-sm font-extrabold text-emerald-300">
+                {formatARS(crisShare + total_production_cost + total_machine_cost)}
               </span>
-              <span className="text-sm font-bold text-emerald-300">{formatARS(crisShare)}</span>
             </div>
-          </div>
+          </>
         )}
       </div>
 
